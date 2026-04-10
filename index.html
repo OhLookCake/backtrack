@@ -562,6 +562,18 @@
     let activeSourceNode = null;
     let activeAnimRef = null;
 
+    let micWarmedUp = false;
+
+    async function warmUpMic() {
+      if (micWarmedUp) return;
+      ensureAudioCtx();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((t) => t.stop());
+        micWarmedUp = true;
+      } catch (e) {}
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────
     const $ = (id) => document.getElementById(id);
 
@@ -768,7 +780,7 @@
     // ── Events ─────────────────────────────────────────────────────────
 
     // Start
-    $("btn-start").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); });
+    $("btn-start").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); warmUpMic(); });
     $("btn-how-to-play").addEventListener("click", () => showScreen("howToPlay"));
     $("btn-back-to-start").addEventListener("click", () => showScreen("start"));
     $("btn-skip-prompt").addEventListener("click", pickPrompt);
