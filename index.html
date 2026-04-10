@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backtrack</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface-2: #232340;
+      --primary: #7c5cfc;
+      --primary-hover: #9578ff;
+      --accent: #ff6b9d;
+      --accent-hover: #ff8db5;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --danger: #ef4444;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100dvh;
+      padding: 32px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+      animation: fadeIn 0.4s ease;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: 6px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tagline { color: var(--text-dim); font-size: 1rem; margin-top: 8px; }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 14px 32px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); }
+    .btn-secondary:hover { background: #2d2d50; }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-accent:hover { background: var(--accent-hover); }
+    .btn-small { padding: 10px 20px; font-size: 0.9rem; }
+    .hidden { display: none !important; }
+
+    .player-badge {
+      background: var(--primary);
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .player-badge.p2 { background: var(--accent); }
+
+    .instruction {
+      color: var(--text-dim);
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      max-width: 360px;
+    }
+
+    .prompt-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      width: 100%;
+      max-width: 380px;
+    }
+    .prompt-label {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .prompt-text {
+      font-size: 1.4rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .recorder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-record {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--danger);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .btn-record:hover { background: rgba(239, 68, 68, 0.1); }
+
+    .record-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--danger);
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .btn-record.recording .record-icon {
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+    }
+    .btn-record.recording {
+      animation: pulse-ring 1.5s ease infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .record-status { color: var(--text-dim); font-size: 0.85rem; }
+
+    .waveform {
+      width: 100%;
+      max-width: 280px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .waveform .bar {
+      width: 3px;
+      background: var(--primary);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+      min-height: 4px;
+    }
+
+    .playback {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .audio-section {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .audio-section h3 { font-size: 1rem; font-weight: 600; }
+    .hint { color: var(--text-dim); font-size: 0.8rem; line-height: 1.4; }
+
+    .guess-section {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .guess-section h3 { font-size: 1rem; font-weight: 600; }
+
+    #input-guess {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid var(--surface-2);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1.1rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    #input-guess:focus { border-color: var(--primary); }
+    #input-guess::placeholder { color: var(--text-dim); }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .result-row { display: flex; flex-direction: column; gap: 6px; }
+    .result-label {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .result-value { font-size: 1.3rem; font-weight: 600; line-height: 1.4; }
+
+    .result-playback {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .result-playback-group {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .result-playback-group .group-label {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .handoff-icon { font-size: 4rem; animation: spin 2s linear infinite; }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    #screen-handoff h2 { text-align: center; }
+
+    .rules {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .rule {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .rule-number {
+      background: var(--primary);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .rule p { font-size: 0.9rem; line-height: 1.5; color: var(--text-dim); }
+    .rule strong { color: var(--text); }
+
+    .btn.playing { pointer-events: none; opacity: 0.8; }
+
+    #screen-p2-guess {
+      max-height: 100dvh;
+      overflow-y: auto;
+      padding-bottom: 40px;
+    }
+
+    @media (max-height: 700px) {
+      #app { padding: 16px 20px; }
+      .screen { gap: 16px; }
+      .logo h1 { font-size: 2.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Start -->
+    <div class="screen active" id="screen-start">
+      <div class="logo">
+        <h1>BACKTRACK</h1>
+        <p class="tagline">Say it forward. Hear it backward. Guess it right.</p>
+      </div>
+      <button class="btn btn-primary" id="btn-start">Start Game</button>
+      <button class="btn btn-secondary" id="btn-how-to-play">How to Play</button>
+    </div>
+
+    <!-- How to Play -->
+    <div class="screen" id="screen-how-to-play">
+      <h2>How to Play</h2>
+      <div class="rules">
+        <div class="rule">
+          <span class="rule-number">1</span>
+          <p><strong>Player 1</strong> gets a secret phrase and records themselves saying it out loud.</p>
+        </div>
+        <div class="rule">
+          <span class="rule-number">2</span>
+          <p><strong>Player 2</strong> hears the recording played <em>backwards</em>. The original phrase stays hidden.</p>
+        </div>
+        <div class="rule">
+          <span class="rule-number">3</span>
+          <p><strong>Player 2</strong> can record themselves mimicking the reversed sounds, then play <em>that</em> recording backwards to decode it.</p>
+        </div>
+        <div class="rule">
+          <span class="rule-number">4</span>
+          <p><strong>Player 2</strong> guesses the original phrase. Both players win by working together!</p>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-back-to-start">Back</button>
+    </div>
+
+    <!-- Player 1 Prompt -->
+    <div class="screen" id="screen-p1-prompt">
+      <div class="player-badge">Player 1</div>
+      <p class="instruction">Make sure Player 2 can't see or hear your screen!</p>
+      <div class="prompt-card">
+        <p class="prompt-label">Your phrase:</p>
+        <p class="prompt-text" id="prompt-text"></p>
+        <button class="btn btn-small btn-secondary" id="btn-skip-prompt">Skip phrase</button>
+      </div>
+      <p class="instruction">Record yourself saying this phrase clearly.</p>
+      <div class="recorder">
+        <button class="btn-record" id="btn-record-p1">
+          <span class="record-icon"></span>
+        </button>
+        <p class="record-status" id="record-status-p1">Tap to record</p>
+        <div class="waveform" id="waveform-p1"></div>
+      </div>
+      <div class="playback hidden" id="playback-p1">
+        <button class="btn btn-small btn-secondary" id="btn-play-p1">Play Recording</button>
+        <button class="btn btn-small btn-secondary" id="btn-redo-p1">Re-record</button>
+      </div>
+      <button class="btn btn-primary hidden" id="btn-p1-done">Lock In &amp; Pass to Player 2</button>
+    </div>
+
+    <!-- Handoff -->
+    <div class="screen" id="screen-handoff">
+      <div class="handoff-icon">&#x1F504;</div>
+      <h2>Pass the device to Player 2</h2>
+      <p class="instruction">Player 1 &mdash; don't let Player 2 see the phrase!</p>
+      <button class="btn btn-primary" id="btn-p2-ready">I'm Player 2 &mdash; Let's Go</button>
+    </div>
+
+    <!-- Player 2 Guess -->
+    <div class="screen" id="screen-p2-guess">
+      <div class="player-badge p2">Player 2</div>
+      <p class="instruction">Listen to Player 1's recording played backwards, then guess the original phrase.</p>
+
+      <div class="audio-section">
+        <h3>Reversed Audio</h3>
+        <button class="btn btn-accent" id="btn-play-reversed">&#x25B6; Play Backwards</button>
+      </div>
+
+      <div class="audio-section">
+        <h3>Your Decode Tool</h3>
+        <p class="hint">Try mimicking the reversed sounds, then play your recording backwards to hear it forwards.</p>
+        <div class="recorder">
+          <button class="btn-record" id="btn-record-p2">
+            <span class="record-icon"></span>
+          </button>
+          <p class="record-status" id="record-status-p2">Tap to record your attempt</p>
+          <div class="waveform" id="waveform-p2"></div>
+        </div>
+        <div class="playback hidden" id="playback-p2">
+          <button class="btn btn-small btn-secondary" id="btn-play-p2-reversed">&#x25B6; Play Your Recording Backwards</button>
+          <button class="btn btn-small btn-secondary" id="btn-redo-p2">Re-record</button>
+        </div>
+      </div>
+
+      <div class="guess-section">
+        <h3>Your Guess</h3>
+        <input type="text" id="input-guess" placeholder="Type your guess here..." autocomplete="off">
+        <button class="btn btn-primary" id="btn-submit-guess">Submit Guess</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="screen" id="screen-results">
+      <h2>The Reveal</h2>
+      <div class="result-card">
+        <div class="result-row">
+          <span class="result-label">Original phrase</span>
+          <span class="result-value" id="result-original"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">Player 2's guess</span>
+          <span class="result-value" id="result-guess"></span>
+        </div>
+      </div>
+      <div class="result-playback-group">
+        <span class="group-label">Player 1</span>
+        <div class="result-playback">
+          <button class="btn btn-small btn-secondary" id="btn-play-original-final">&#x25B6; Original</button>
+          <button class="btn btn-small btn-secondary" id="btn-play-reversed-final">&#x25B6; Reversed</button>
+        </div>
+      </div>
+      <div class="result-playback-group hidden" id="p2-playback-group">
+        <span class="group-label">Player 2</span>
+        <div class="result-playback">
+          <button class="btn btn-small btn-secondary" id="btn-play-p2-final">&#x25B6; Recording</button>
+          <button class="btn btn-small btn-secondary" id="btn-play-p2-reversed-final">&#x25B6; Reversed</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-play-again">Play Again</button>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Prompts ────────────────────────────────────────────────────────
+    const PROMPTS = [
+      "The quick brown fox jumps over the lazy dog",
+      "She sells seashells by the seashore",
+      "I scream you scream we all scream for ice cream",
+      "How much wood would a woodchuck chuck",
+      "To be or not to be that is the question",
+      "All that glitters is not gold",
+      "Houston we have a problem",
+      "May the force be with you",
+      "Life is like a box of chocolates",
+      "To infinity and beyond",
+      "Just keep swimming just keep swimming",
+      "Is this the real life or is this just fantasy",
+      "We will we will rock you",
+      "Never gonna give you up never gonna let you down",
+      "I got a feeling that tonight's gonna be a good night",
+      "Twinkle twinkle little star how I wonder what you are",
+      "Jack and Jill went up the hill",
+      "Humpty Dumpty sat on a wall",
+      "Peter Piper picked a peck of pickled peppers",
+      "The rain in Spain stays mainly in the plain",
+      "Hakuna matata what a wonderful phrase",
+      "Let it go let it go",
+      "Yesterday all my troubles seemed so far away",
+      "Hey Jude don't make it bad",
+      "Here comes the sun and I say it's all right",
+      "Somewhere over the rainbow way up high",
+      "What a wonderful world",
+      "Don't stop believing hold on to that feeling",
+      "Sweet Caroline good times never seemed so good",
+      "Take me home country roads to the place I belong",
+      "Every breath you take every move you make",
+      "I will always love you",
+      "Rolling in the deep",
+      "Happy birthday to you",
+    ];
+
+    // ── State ──────────────────────────────────────────────────────────
+    let currentPrompt = "";
+    let audioCtx = null;
+    let p1AudioBuffer = null;
+    let p1ReversedBuffer = null;
+    let p2AudioBuffer = null;
+    let p2ReversedBuffer = null;
+    let currentSource = null;
+    let activeRecorder = null;
+    let activeStream = null;
+    let activeSourceNode = null;
+    let activeAnimRef = null;
+
+    // ── Helpers ────────────────────────────────────────────────────────
+    const $ = (id) => document.getElementById(id);
+
+    const screens = {
+      start: $("screen-start"),
+      howToPlay: $("screen-how-to-play"),
+      p1Prompt: $("screen-p1-prompt"),
+      handoff: $("screen-handoff"),
+      p2Guess: $("screen-p2-guess"),
+      results: $("screen-results"),
+    };
+
+    function showScreen(name) {
+      document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+      screens[name].classList.add("active");
+    }
+
+    function ensureAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    // ── Reverse an AudioBuffer ─────────────────────────────────────────
+    function reverseBuffer(buffer) {
+      const reversed = audioCtx.createBuffer(
+        buffer.numberOfChannels, buffer.length, buffer.sampleRate
+      );
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        const src = buffer.getChannelData(ch);
+        const dst = reversed.getChannelData(ch);
+        for (let i = 0; i < src.length; i++) {
+          dst[i] = src[src.length - 1 - i];
+        }
+      }
+      return reversed;
+    }
+
+    // ── Playback ───────────────────────────────────────────────────────
+    function stopPlayback() {
+      if (currentSource) {
+        try { currentSource.stop(); } catch (e) {}
+        currentSource = null;
+      }
+      document.querySelectorAll(".btn.playing").forEach((b) => b.classList.remove("playing"));
+    }
+
+    function playBuffer(buffer, btn) {
+      ensureAudioCtx();
+      stopPlayback();
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+      currentSource = source;
+      if (btn) {
+        btn.classList.add("playing");
+        const orig = btn.textContent;
+        btn.textContent = "Playing...";
+        source.onended = () => {
+          btn.classList.remove("playing");
+          btn.textContent = orig;
+          currentSource = null;
+        };
+      } else {
+        source.onended = () => { currentSource = null; };
+      }
+    }
+
+    // ── Decode blob → AudioBuffer ──────────────────────────────────────
+    async function decodeBlob(blob) {
+      ensureAudioCtx();
+      const arr = await blob.arrayBuffer();
+      return audioCtx.decodeAudioData(arr);
+    }
+
+    // ── Waveform visualizer ────────────────────────────────────────────
+    function createBars(container) {
+      container.innerHTML = "";
+      for (let i = 0; i < 32; i++) {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = "4px";
+        container.appendChild(bar);
+      }
+    }
+
+    function animateWaveform(analyser, container, ref) {
+      const bars = container.querySelectorAll(".bar");
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const step = Math.floor(data.length / bars.length);
+      function draw() {
+        analyser.getByteFrequencyData(data);
+        for (let i = 0; i < bars.length; i++) {
+          bars[i].style.height = Math.max(4, (data[i * step] / 255) * 48) + "px";
+        }
+        if (ref.id !== null) ref.id = requestAnimationFrame(draw);
+      }
+      ref.id = requestAnimationFrame(draw);
+    }
+
+    function stopWaveform(container, ref) {
+      if (ref && ref.id !== null) { cancelAnimationFrame(ref.id); ref.id = null; }
+      container.querySelectorAll(".bar").forEach((b) => (b.style.height = "4px"));
+    }
+
+    // ── Recording ──────────────────────────────────────────────────────
+    async function startRecording(isP1) {
+      ensureAudioCtx();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      const srcNode = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      srcNode.connect(analyser);
+
+      const waveContainer = $(isP1 ? "waveform-p1" : "waveform-p2");
+      createBars(waveContainer);
+      const animRef = { id: null };
+
+      activeRecorder = recorder;
+      activeStream = stream;
+      activeSourceNode = srcNode;
+      activeAnimRef = animRef;
+
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        srcNode.disconnect();
+        stopWaveform(waveContainer, animRef);
+        activeRecorder = null;
+        activeStream = null;
+        activeSourceNode = null;
+        activeAnimRef = null;
+
+        const blob = new Blob(chunks, { type: recorder.mimeType });
+        const buffer = await decodeBlob(blob);
+
+        if (isP1) {
+          p1AudioBuffer = buffer;
+          p1ReversedBuffer = reverseBuffer(buffer);
+          $("playback-p1").classList.remove("hidden");
+          $("btn-p1-done").classList.remove("hidden");
+          $("record-status-p1").textContent = "Recording saved!";
+        } else {
+          p2AudioBuffer = buffer;
+          p2ReversedBuffer = reverseBuffer(buffer);
+          $("playback-p2").classList.remove("hidden");
+          $("record-status-p2").textContent = "Recording saved!";
+        }
+      };
+
+      recorder.start();
+      animateWaveform(analyser, waveContainer, animRef);
+
+      const btn = $(isP1 ? "btn-record-p1" : "btn-record-p2");
+      btn.classList.add("recording");
+      $(isP1 ? "record-status-p1" : "record-status-p2").textContent = "Recording... tap to stop";
+    }
+
+    function stopRecording(isP1) {
+      if (activeRecorder && activeRecorder.state === "recording") activeRecorder.stop();
+      $(isP1 ? "btn-record-p1" : "btn-record-p2").classList.remove("recording");
+    }
+
+    // ── Prompt ─────────────────────────────────────────────────────────
+    function pickPrompt() {
+      currentPrompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+      $("prompt-text").textContent = currentPrompt;
+    }
+
+    // ── Reset ──────────────────────────────────────────────────────────
+    function resetGame() {
+      stopPlayback();
+      p1AudioBuffer = p1ReversedBuffer = p2AudioBuffer = p2ReversedBuffer = null;
+
+      $("playback-p1").classList.add("hidden");
+      $("btn-p1-done").classList.add("hidden");
+      $("btn-record-p1").classList.remove("recording");
+      $("record-status-p1").textContent = "Tap to record";
+      $("waveform-p1").innerHTML = "";
+
+      $("playback-p2").classList.add("hidden");
+      $("btn-record-p2").classList.remove("recording");
+      $("record-status-p2").textContent = "Tap to record your attempt";
+      $("waveform-p2").innerHTML = "";
+      $("input-guess").value = "";
+    }
+
+    // ── Events ─────────────────────────────────────────────────────────
+
+    // Start
+    $("btn-start").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); });
+    $("btn-how-to-play").addEventListener("click", () => showScreen("howToPlay"));
+    $("btn-back-to-start").addEventListener("click", () => showScreen("start"));
+    $("btn-skip-prompt").addEventListener("click", pickPrompt);
+
+    // P1 record
+    $("btn-record-p1").addEventListener("click", async () => {
+      if (activeRecorder && activeRecorder.state === "recording") {
+        stopRecording(true);
+      } else {
+        $("playback-p1").classList.add("hidden");
+        $("btn-p1-done").classList.add("hidden");
+        await startRecording(true);
+      }
+    });
+
+    $("btn-play-p1").addEventListener("click", () => {
+      if (p1AudioBuffer) playBuffer(p1AudioBuffer, $("btn-play-p1"));
+    });
+
+    $("btn-redo-p1").addEventListener("click", () => {
+      stopPlayback();
+      p1AudioBuffer = p1ReversedBuffer = null;
+      $("playback-p1").classList.add("hidden");
+      $("btn-p1-done").classList.add("hidden");
+      $("record-status-p1").textContent = "Tap to record";
+      $("waveform-p1").innerHTML = "";
+    });
+
+    $("btn-p1-done").addEventListener("click", () => { stopPlayback(); showScreen("handoff"); });
+    $("btn-p2-ready").addEventListener("click", () => showScreen("p2Guess"));
+
+    // P2
+    $("btn-play-reversed").addEventListener("click", () => {
+      if (p1ReversedBuffer) playBuffer(p1ReversedBuffer, $("btn-play-reversed"));
+    });
+
+    $("btn-record-p2").addEventListener("click", async () => {
+      if (activeRecorder && activeRecorder.state === "recording") {
+        stopRecording(false);
+      } else {
+        $("playback-p2").classList.add("hidden");
+        await startRecording(false);
+      }
+    });
+
+    $("btn-play-p2-reversed").addEventListener("click", () => {
+      if (p2ReversedBuffer) playBuffer(p2ReversedBuffer, $("btn-play-p2-reversed"));
+    });
+
+    $("btn-redo-p2").addEventListener("click", () => {
+      stopPlayback();
+      p2AudioBuffer = p2ReversedBuffer = null;
+      $("playback-p2").classList.add("hidden");
+      $("record-status-p2").textContent = "Tap to record your attempt";
+      $("waveform-p2").innerHTML = "";
+    });
+
+    // Guess
+    $("btn-submit-guess").addEventListener("click", () => {
+      const guess = $("input-guess").value.trim();
+      if (!guess) { $("input-guess").focus(); return; }
+      stopPlayback();
+      $("result-original").textContent = currentPrompt;
+      $("result-guess").textContent = guess;
+      if (p2AudioBuffer) {
+        $("p2-playback-group").classList.remove("hidden");
+      } else {
+        $("p2-playback-group").classList.add("hidden");
+      }
+      showScreen("results");
+    });
+
+    $("input-guess").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("btn-submit-guess").click();
+    });
+
+    // Results
+    $("btn-play-original-final").addEventListener("click", () => {
+      if (p1AudioBuffer) playBuffer(p1AudioBuffer, $("btn-play-original-final"));
+    });
+    $("btn-play-reversed-final").addEventListener("click", () => {
+      if (p1ReversedBuffer) playBuffer(p1ReversedBuffer, $("btn-play-reversed-final"));
+    });
+    $("btn-play-p2-final").addEventListener("click", () => {
+      if (p2AudioBuffer) playBuffer(p2AudioBuffer, $("btn-play-p2-final"));
+    });
+    $("btn-play-p2-reversed-final").addEventListener("click", () => {
+      if (p2ReversedBuffer) playBuffer(p2ReversedBuffer, $("btn-play-p2-reversed-final"));
+    });
+    $("btn-play-again").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); });
+  </script>
+</body>
+</html>
