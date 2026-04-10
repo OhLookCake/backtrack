@@ -564,12 +564,21 @@
     }
 
     // ── Playback ───────────────────────────────────────────────────────
+    let playingBtn = null;
+    let playingBtnOrigText = "";
+
     function stopPlayback() {
       if (currentSource) {
+        currentSource.onended = null;
         try { currentSource.stop(); } catch (e) {}
         currentSource = null;
       }
-      document.querySelectorAll(".btn.playing").forEach((b) => b.classList.remove("playing"));
+      if (playingBtn) {
+        playingBtn.classList.remove("playing");
+        playingBtn.textContent = playingBtnOrigText;
+        playingBtn = null;
+        playingBtnOrigText = "";
+      }
     }
 
     function playBuffer(buffer, btn) {
@@ -581,12 +590,15 @@
       source.start();
       currentSource = source;
       if (btn) {
+        playingBtnOrigText = btn.textContent;
+        playingBtn = btn;
         btn.classList.add("playing");
-        const orig = btn.textContent;
         btn.textContent = "Playing...";
         source.onended = () => {
           btn.classList.remove("playing");
-          btn.textContent = orig;
+          btn.textContent = playingBtnOrigText;
+          playingBtn = null;
+          playingBtnOrigText = "";
           currentSource = null;
         };
       } else {
