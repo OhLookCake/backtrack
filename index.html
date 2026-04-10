@@ -67,7 +67,7 @@
     <!-- Player 1 Prompt -->
     <div class="screen" id="screen-p1-prompt">
       <div class="player-badge">Player 1</div>
-      <p class="instruction">Make sure Player 2 can't see or hear your screen!</p>
+      <p class="instruction">Make sure Player 2 can't see the screen or hear you!</p>
       <div class="prompt-card">
         <p class="prompt-label">Your phrase:</p>
         <p class="prompt-text" id="prompt-text"></p>
@@ -156,7 +156,7 @@
           <button class="btn btn-small btn-secondary" id="btn-play-p2-reversed-final">&#x25B6; Reversed</button>
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-play-again">Play Again</button>
+      <button class="btn btn-primary" id="btn-new-round">New Round</button>
     </div>
 
   </div>
@@ -547,7 +547,7 @@
     $("btn-play-p2-reversed-final").addEventListener("click", () => {
       if (p2ReversedBuffer) playBuffer(p2ReversedBuffer, $("btn-play-p2-reversed-final"));
     });
-    $("btn-play-again").addEventListener("click", () => { startGame(backwardsMode ? "backwards" : "classic"); });
+    $("btn-new-round").addEventListener("click", () => { startGame(backwardsMode ? "backwards" : "classic"); });
 
     // ── Theme toggle ───────────────────────────────────────────────────
     (function () {
