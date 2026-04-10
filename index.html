@@ -19,13 +19,15 @@
         <h1>BACKTRACK</h1>
         <p class="tagline">Say it forward. Hear it backward. Guess it right.</p>
       </div>
-      <button class="btn btn-primary" id="btn-start">Start Game</button>
+      <button class="btn btn-primary" id="btn-start">Classic Mode</button>
+      <button class="btn btn-accent" id="btn-start-backwards">Backwards Mode</button>
       <button class="btn btn-secondary" id="btn-how-to-play">How to Play</button>
     </div>
 
     <!-- How to Play -->
     <div class="screen" id="screen-how-to-play">
       <h2>How to Play</h2>
+      <h3>Classic Mode</h3>
       <div class="rules">
         <div class="rule">
           <span class="rule-number">1</span>
@@ -44,6 +46,21 @@
           <p><strong>Player 2</strong> guesses the original phrase. Both players win by working together!</p>
         </div>
       </div>
+      <h3>Backwards Mode</h3>
+      <div class="rules">
+        <div class="rule">
+          <span class="rule-number">1</span>
+          <p><strong>Player 1</strong> gets a secret phrase and tries to <em>say it backwards</em> &mdash; reversing the words and sounds in their head.</p>
+        </div>
+        <div class="rule">
+          <span class="rule-number">2</span>
+          <p>The app reverses Player 1's recording, so if they nailed it, <strong>Player 2</strong> hears something close to the original phrase.</p>
+        </div>
+        <div class="rule">
+          <span class="rule-number">3</span>
+          <p><strong>Player 2</strong> listens and guesses the original phrase. No decode tool needed!</p>
+        </div>
+      </div>
       <button class="btn btn-primary" id="btn-back-to-start">Back</button>
     </div>
 
@@ -56,7 +73,7 @@
         <p class="prompt-text" id="prompt-text"></p>
         <button class="btn btn-small btn-secondary" id="btn-skip-prompt">Skip phrase</button>
       </div>
-      <p class="instruction">Record yourself saying this phrase clearly.</p>
+      <p class="instruction" id="p1-record-instruction">Record yourself saying this phrase clearly.</p>
       <div class="recorder">
         <button class="btn-record" id="btn-record-p1">
           <span class="record-icon"></span>
@@ -82,14 +99,14 @@
     <!-- Player 2 Guess -->
     <div class="screen" id="screen-p2-guess">
       <div class="player-badge p2">Player 2</div>
-      <p class="instruction">Listen to Player 1's recording played backwards, then guess the original phrase.</p>
+      <p class="instruction" id="p2-instruction">Listen to Player 1's recording played backwards, then guess the original phrase.</p>
 
       <div class="audio-section">
-        <h3>Reversed Audio</h3>
+        <h3 id="p2-audio-label">Reversed Audio</h3>
         <button class="btn btn-accent" id="btn-play-reversed">&#x25B6; Play Backwards</button>
       </div>
 
-      <div class="audio-section">
+      <div class="audio-section" id="p2-decode-section">
         <h3>Your Decode Tool</h3>
         <p class="hint">Try mimicking the reversed sounds, then play your recording backwards to hear it forwards.</p>
         <div class="recorder">
@@ -184,6 +201,7 @@
     ];
 
     // ── State ──────────────────────────────────────────────────────────
+    let backwardsMode = false;
     let currentPrompt = "";
     let audioCtx = null;
     let p1AudioBuffer = null;
@@ -411,10 +429,35 @@
       $("input-guess").value = "";
     }
 
+    // ── Mode setup ──────────────────────────────────────────────────────
+    function applyMode() {
+      if (backwardsMode) {
+        $("p1-record-instruction").textContent = "Try to say this phrase backwards — reverse the sounds in your head!";
+        $("p2-instruction").textContent = "Listen to Player 1's reversed recording and guess the original phrase.";
+        $("p2-audio-label").textContent = "Player 1 (Reversed)";
+        $("p2-decode-section").classList.add("hidden");
+      } else {
+        $("p1-record-instruction").textContent = "Record yourself saying this phrase clearly.";
+        $("p2-instruction").textContent = "Listen to Player 1's recording played backwards, then guess the original phrase.";
+        $("p2-audio-label").textContent = "Reversed Audio";
+        $("p2-decode-section").classList.remove("hidden");
+      }
+    }
+
+    function startGame(mode) {
+      backwardsMode = mode === "backwards";
+      resetGame();
+      pickPrompt();
+      applyMode();
+      showScreen("p1Prompt");
+      warmUpMic();
+    }
+
     // ── Events ─────────────────────────────────────────────────────────
 
     // Start
-    $("btn-start").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); warmUpMic(); });
+    $("btn-start").addEventListener("click", () => startGame("classic"));
+    $("btn-start-backwards").addEventListener("click", () => startGame("backwards"));
     $("btn-how-to-play").addEventListener("click", () => showScreen("howToPlay"));
     $("btn-back-to-start").addEventListener("click", () => showScreen("start"));
     $("btn-skip-prompt").addEventListener("click", pickPrompt);
@@ -479,7 +522,7 @@
       stopPlayback();
       $("result-original").textContent = currentPrompt;
       $("result-guess").textContent = guess;
-      if (p2AudioBuffer) {
+      if (p2AudioBuffer && !backwardsMode) {
         $("p2-playback-group").classList.remove("hidden");
       } else {
         $("p2-playback-group").classList.add("hidden");
@@ -504,7 +547,7 @@
     $("btn-play-p2-reversed-final").addEventListener("click", () => {
       if (p2ReversedBuffer) playBuffer(p2ReversedBuffer, $("btn-play-p2-reversed-final"));
     });
-    $("btn-play-again").addEventListener("click", () => { resetGame(); pickPrompt(); showScreen("p1Prompt"); });
+    $("btn-play-again").addEventListener("click", () => { startGame(backwardsMode ? "backwards" : "classic"); });
 
     // ── Theme toggle ───────────────────────────────────────────────────
     (function () {
